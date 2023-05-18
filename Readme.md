@@ -1,4 +1,4 @@
-Diskos is a disk utility program made for linux. It uses inbuilt tools like smartctl, fdisk, dd and badblocks.
+Diskos is a Disk Utility Program made for Linux. It uses inbuilt tools like smartctl, fdisk, dd and badblocks.
 Diskos allows users to perform many activities on computer disk like - 
 See Disc Status
 See Disc Information
