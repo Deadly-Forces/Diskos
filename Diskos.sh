@@ -28,29 +28,24 @@ function tool_check () {
     fi
 }
 
-# List available disks and partitions
-function list_disks() {
-    echo "Available disks:"
-    lsblk -d | awk '{print $1}' | tail -n +2
-}
-
-# User Input
+# Automatically select the first available disk
 function disk_sel () {
     echo ""
-    list_disks  # Call to list disks
-    echo "Input Disc Name (Eg - sda, sdb) or press Enter for default (first disk):"  
-    read disk   
+    echo "Automatically selecting the first available disk..."
+    disk=$(lsblk -d | awk '{print $1}' | grep -v '^loop' | tail -n +2 | head -n 1)
 
-    # If no input, default to the first disk
     if [[ -z "$disk" ]]; then
-        disk=$(lsblk -d | awk '{print $1}' | tail -n +2 | head -n 1)
-        echo "Using default disk: $disk"
+        echo "No disks found. Please check your system."
+        exit 1
+    else
+        echo "Using disk: $disk"
     fi
 
     echo "Partition number: (Eg - 1, 2, 3):"  
     read part 
     echo ""
 }
+
 
 ##
 # Main-menu functions
@@ -68,7 +63,7 @@ function disk_health () {
     echo ""
     echo "Disk Health Status on ${server_name} is: "
     echo ""
-    smartctl -i /dev/${disk}
+    smartctl -i /dev/${disk} || { echo "Failed to retrieve information for /dev/${disk}."; }
     echo ""
 }
 
@@ -76,7 +71,7 @@ function disk_part () {
     echo ""
     echo "Disk Partition on ${server_name} is: "
     echo ""
-    fdisk -l /dev/${disk}
+    fdisk -l /dev/${disk} || { echo "Failed to list partitions for /dev/${disk}."; }
     echo ""
 }
 
@@ -85,16 +80,16 @@ function smart_check() {
     echo "Quick Smart Check on ${server_name}: "
     echo ""
 
-    # Check if the disk and partition exist
-    if [ -e "/dev/${disk}${part}" ]; then
-        # Specify the device type if needed (e.g., -d scsi, -d ata)
-        if badblocks -sv /dev/${disk}${part} -o Bad_Blocks.md; then
-            smartctl -H /dev/${disk}
-        else 
-            echo "Error running badblocks. Please ensure the disk and partition are correct."
+    # Check if the disk exists
+    if [ -e "/dev/${disk}" ]; then
+        # Run the smart check
+        if smartctl -H /dev/${disk}; then
+            echo "SMART check completed successfully."
+        else
+            echo "Error running SMART check on /dev/${disk}."
         fi
     else
-        echo "Error: The partition /dev/${disk}${part} does not exist. Please check your selection."
+        echo "Error: The disk /dev/${disk} does not exist. Please check your selection."
     fi
     echo ""
 }
@@ -129,7 +124,6 @@ function bench_mark() {
     rmdir mntbench
     echo ""
 }
-
 
 function all_checks() {
     empty
@@ -167,8 +161,7 @@ function show_help() {
     echo "3) Quick Smartctl Check - Performs a quick SMART check on the selected partition."
     echo "4) Benchmark - Runs a benchmark on the selected disk partition."
     echo "5) Check All - Runs all available checks."
-    echo "6) Select Disk & Partition - Choose which disk and partition to work with."
-    echo "7) Disk Space Result (ONLY MOUNTED) - Shows the disk space usage of mounted partitions."
+    echo "6) Disk Space Result (ONLY MOUNTED) - Shows the disk space usage of mounted partitions."
     echo "0) Exit - Exit the script."
 }
 
@@ -183,9 +176,8 @@ $(ColorGreen '2)') View all Disk Partition
 $(ColorGreen '3)') Quick Smartctl Check 
 $(ColorGreen '4)') Benchmark
 $(ColorGreen '5)') Check All
-$(ColorGreen '6)') Select Disk & Partition
-$(ColorGreen '7)') Disk Space Result (ONLY MOUNTED)
-$(ColorGreen '8)') Help
+$(ColorGreen '6)') Disk Space Result (ONLY MOUNTED)
+$(ColorGreen '7)') Help
 $(ColorGreen '0)') Exit
 $(ColorBlue 'Choose an option: ') "
     
@@ -196,9 +188,8 @@ $(ColorBlue 'Choose an option: ') "
         3) smart_check; menu ;;
         4) bench_mark; menu ;;
         5) all_checks; menu ;;
-        6) disk_sel; menu ;;
-        7) empty; menu ;;
-        8) show_help; menu ;;
+        6) empty; menu ;;
+        7) show_help; menu ;;
         0) exit 0 ;;
         *) echo -e "$red Wrong option.$clear"; menu ;;
     esac
@@ -208,6 +199,5 @@ $(ColorBlue 'Choose an option: ') "
 echo -ne "Diskos \n "
 root_check
 tool_check
-echo -ne "If you do not know your Disk and Partition, press Enter \n and use Option 2 (View all Disk Partition) to know your Disk and Partition \n Use Option 6 (Select Disk & Partition) to select. \n "
-disk_sel
+disk_sel  # Automatically select the disk
 menu
