@@ -14,7 +14,7 @@ server_name=$(hostname)
 function root_check () {
 if [ "$EUID" -ne 0 ]
   then echo "Please run as root"
-  exit
+  exit 1
 fi
 }
 
@@ -30,7 +30,7 @@ fi
 # List available disks and partitions
 function list_disks() {
     echo "Available disks:"
-    lsblk -d | awk '{print $1}' | tail -n +2  # Skip header
+    lsblk -d | awk '{print $1}' | tail -n +2
 }
 
 # User Input
@@ -77,7 +77,8 @@ function smart_check() {
     echo ""
 	echo "Quick Smart Check  on ${server_name}: "
     echo ""
-	badblocks -sv /dev/${disk}${part} -o Bad_Blocks.md then smartctl -H /dev/${disk}
+ if	
+ badblocks -sv /dev/${disk}${part} -o Bad_Blocks.md then smartctl -H /dev/${disk}
  else 
  echo "Error running badlocks. Check your disk and partition."
  fi
@@ -90,7 +91,7 @@ function bench_mark () {
 	echo ""
 #	export disk=${disk}
 #export part=3
-echo "test size for benchmark in MB () "  
+echo "Test size for benchmark in MB () "  
 read testsize
 
 #export testsize=100 # in megabytes
@@ -106,8 +107,8 @@ cd mntbench || { echo "Failed to change directory to mntbench"; exit 1; }
 dd if=/dev/zero of=temp oflag=direct bs=1048576 count="${testsize}" status=progress
 rm temp
 cd ..
-umount /tmp/mntbench
-rmdir /tmp/mntbench
+umount ./mntbench
+rmdir mntbench
 
     echo ""
 }
