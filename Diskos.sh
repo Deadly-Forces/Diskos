@@ -69,12 +69,11 @@ function disk_health () {
 
 function disk_part () {
     echo ""
-    echo "Disk Partition on ${server_name} for /dev/${disk} is: "
+    echo "Disk Partition on ${server_name} is: "
     echo ""
     fdisk -l /dev/${disk} || { echo "Failed to list partitions for /dev/${disk}."; }
     echo ""
 }
-
 
 function smart_check() {
     echo ""
