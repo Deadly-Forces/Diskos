@@ -22,8 +22,15 @@ fi
 function tool_check () {
 	if ! [ -x "$(command -v smartctl)" ]; then
   echo 'Error: smartctl is not installed.' >&2
+exit 1
   else echo -ne "Smartctl found, You can proceed! \n \n" 
 fi
+}
+
+# List available disks and partitions
+function list_disks() {
+    echo "Available disks:"
+    lsblk -d | awk '{print $1}' | tail -n +2  # Skip header
 }
 
 # User Input
@@ -50,9 +57,10 @@ function empty () {
 }
 
 function disk_health () {
-    echo ""
+        echo ""
 	echo "Disk Health Status on ${server_name} is: "
 	echo ""
+ 	echo ""
 	smartctl -i /dev/${disk}
 	echo ""
 }
@@ -69,7 +77,10 @@ function smart_check() {
     echo ""
 	echo "Quick Smart Check  on ${server_name}: "
     echo ""
-	badblocks -sv /dev/${disk}${part} -o Bad_Blocks.md && smartctl -H /dev/${disk}
+	badblocks -sv /dev/${disk}${part} -o Bad_Blocks.md then smartctl -H /dev/${disk}
+ else 
+ echo "Error running badlocks. Check your disk and partition."
+ fi
     echo ""
 }
 
@@ -81,15 +92,20 @@ function bench_mark () {
 #export part=3
 echo "test size for benchmark in MB () "  
 read testsize
+
 #export testsize=100 # in megabytes
-cd /tmp
-rmdir mntbench 2&>1 >/dev/null
+cd /tmp || { echo "Failed to change the directory to /tmp"; exit 1; }
+rmdir mntbench 2>/dev/null
 mkdir mntbench
 mount /dev/${disk}${part} ./mntbench
-cd mntbench
+if ! mount /dev/${disk}${part} ./mntbench; then
+echo "Error: Unable to mount /dev/${disk}${part}. Please check the device."
+exit 1
+fi
+cd mntbench || { echo "Failed to change directory to mntbench"; exit 1; }
 dd if=/dev/zero of=temp oflag=direct bs=1048576 count="${testsize}" status=progress
 rm temp
-cd
+cd ..
 umount /tmp/mntbench
 rmdir /tmp/mntbench
 
@@ -122,7 +138,17 @@ ColorGreen(){
 ColorBlue(){
 	echo -ne $blue$1$clear
 }
-
+## Help
+function show_help() {
+    echo "Help Section:"
+    echo "1) Verify Disk Health - Checks the SMART status of the disk."
+    echo "2) View all Disk Partition - Lists all partitions on the disks."
+    echo "3) Quick Smartctl Check - Performs a quick SMART check on the selected partition."
+    echo "4) Benchmark - Runs a benchmark on the selected disk partition."
+    echo "5) Check All - Runs all available checks."
+    echo "6) Select Disk & Partition - Choose which disk and partition to work with."
+    echo "7) Disk Space Result (ONLY MOUNTED) - Shows the disk space usage of mounted partitions."
+    echo "0) Exit - Exit the script."
 ##
 # Main-menu
 ##
@@ -137,6 +163,7 @@ $(ColorGreen '4)') Benchmark
 $(ColorGreen '5)') Check All
 $(ColorGreen '6)') Select Disk & Partition
 $(ColorGreen '7)') Disk Space Result (ONLY MOUNTED)
+$(ColourGreen '8)') Help
 $(ColorGreen '0)') Exit
 $(ColorBlue 'Choose an option:') "
         read a
@@ -148,6 +175,7 @@ $(ColorBlue 'Choose an option:') "
 	        5) all_checks ; menu ;;
 			6) disk_sel ; menu ;;
 			7) empty ; menu ;;
+   			8) show_help; menu ;;
 		0) exit 0 ;;
 		*) echo -e $red"Wrong option."$clear; WrongCommand;;
         esac
